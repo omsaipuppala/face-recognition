@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Train Recognizer</h2>
+  <p>Click train to build/update the face recognition model using saved student images.</p>
+  
+  <div style="margin-bottom: 1rem;">
+    <button id="cleanup">Cleanup Duplicates</button>
+    <button id="train">Train Model</button>
+  </div>
+  
+  <div id="status"></div>
+  <pre id="out"></pre>
+</article>
+
+<script>
+document.getElementById('cleanup').addEventListener('click', async () => {
+  if (!confirm('This will remove duplicate students and clean up the dataset. Continue?')) return;
+  
+  const res = await fetch('/api/cleanup-duplicates', { method: 'POST' });
+  const data = await res.json();
+  
+  if (res.ok) {
+    document.getElementById('status').innerHTML = `<p style="color: green;">${data.message}</p>`;
+    document.getElementById('out').innerText = JSON.stringify(data, null, 2);
+  } else {
+    document.getElementById('status').innerHTML = `<p style="color: red;">Cleanup failed: ${data.error || 'Unknown error'}</p>`;
+  }
+});
+
+document.getElementById('train').addEventListener('click', async () => {
+  document.getElementById('status').innerHTML = '<p>Training in progress...</p>';
+  const res = await fetch('/api/train', { method: 'POST' });
+  const data = await res.json();
+  
+  if (res.ok) {
+    if (data.trained) {
+      document.getElementById('status').innerHTML = `<p style="color: green;">Training completed! ${data.faces} faces from ${data.students} students.</p>`;
+    } else {
+      document.getElementById('status').innerHTML = '<p style="color: orange;">No training data available. Register students and capture images first.</p>';
+    }
+  } else {
+    document.getElementById('status').innerHTML = '<p style="color: red;">Training failed!</p>';
+  }
+  
+  document.getElementById('out').innerText = JSON.stringify(data, null, 2);
+});
+</script>
+{% endblock %}
+
+
+

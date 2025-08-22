@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Register Student</h2>
+  <form id="register-form">
+    <label>
+      Full name
+      <input type="text" id="name" placeholder="Name" required />
+    </label>
+    <label>
+      Roll number
+      <input type="text" id="roll" placeholder="20XX-ABC-123" required />
+    </label>
+    <button type="submit">Create student</button>
+  </form>
+
+  <hr />
+
+  <section id="capture-section" style="display:none;">
+    <h3>Capture Faces</h3>
+    <p>Take 20-30 varied shots for better accuracy.</p>
+    <div class="row">
+      <div>
+        <video id="video" width="480" height="360" autoplay playsinline></video>
+        <div style="margin-top:.5rem;">
+          <button id="capture">Capture</button>
+          <button id="upload" class="secondary">Upload batch</button>
+        </div>
+      </div>
+      <div>
+        <canvas id="canvas" width="480" height="360"></canvas>
+        <p id="counter">0 images queued</p>
+      </div>
+    </div>
+  </section>
+</article>
+
+<script>
+function isSecureOk() {
+  return window.isSecureContext || ['localhost','127.0.0.1'].includes(location.hostname);
+}
+
+async function requestCameraStream() {
+  const constraints = { video: { facingMode: 'user' }, audio: false };
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+  if (legacy) {
+    return new Promise((resolve, reject) => legacy.call(navigator, constraints, resolve, reject));
+  }
+  throw new Error('Camera API not supported in this browser');
+}
+
+let stream;
+let queue = [];
+let studentId = null;
+
+async function initCamera() {
+  if (!isSecureOk()) {
+    alert('Use http://localhost or http://127.0.0.1 (or HTTPS) for camera access.');
+    return;
+  }
+  try {
+    stream = await requestCameraStream();
+    document.getElementById('video').srcObject = stream;
+  } catch (e) {
+    alert('Camera access failed: ' + (e && e.message ? e.message : e));
+  }
+}
+
+function drawFrameToCanvas() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+}
+
+function toDataUrl() {
+  const canvas = document.getElementById('canvas');
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+function updateCounter() {
+  document.getElementById('counter').innerText = `${queue.length} images queued`;
+}
+
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const roll = document.getElementById('roll').value.trim();
+  if (!name || !roll) return;
+  const res = await fetch('/api/students', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name: name, roll_no: roll })
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || 'Failed to create student'); return; }
+  studentId = data.id;
+  document.getElementById('capture-section').style.display = '';
+  await initCamera();
+});
+
+document.getElementById('capture').addEventListener('click', () => {
+  drawFrameToCanvas();
+  queue.push(toDataUrl());
+  updateCounter();
+});
+
+document.getElementById('upload').addEventListener('click', async () => {
+  if (!studentId) { alert('Create student first'); return; }
+  if (queue.length === 0) { alert('No images to upload'); return; }
+  const imgs = queue.splice(0, queue.length);
+  updateCounter();
+  const res = await fetch(`/api/students/${studentId}/images`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ images: imgs })
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || 'Upload failed'); return; }
+  alert(`Saved ${data.saved} images. You can add more or go to Sessions to train.`);
+});
+</script>
+{% endblock %}

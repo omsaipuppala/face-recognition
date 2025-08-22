@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Sessions</h2>
+  <form method="post" style="margin-bottom:1rem;">
+    <label>
+      Session name (optional)
+      <input type="text" name="name" placeholder="Morning class" />
+    </label>
+    <button type="submit">Create session</button>
+  </form>
+
+  {% if sessions %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Date</th><th>Created</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for s in sessions %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.session_date.isoformat() }}</td>
+        <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <a href="/sessions/{{ s.id }}">Open</a>
+          <button class="del" data-id="{{ s.id }}">Delete</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No sessions created yet.</p>
+  {% endif %}
+</article>
+<script>
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button.del');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  if (!confirm('Delete this session and its attendance records?')) return;
+  const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    location.reload();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'Delete failed');
+  }
+});
+</script>
+{% endblock %}

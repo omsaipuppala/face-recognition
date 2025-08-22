@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Edit Student</h2>
+  <form id="edit-form">
+    <label>
+      Full name
+      <input type="text" id="name" value="{{ student.name }}" required />
+    </label>
+    <label>
+      Roll number
+      <input type="text" id="roll" value="{{ student.roll_no }}" required />
+    </label>
+    <button type="submit">Update Student</button>
+    <a href="/students" role="button" class="secondary">Cancel</a>
+  </form>
+</article>
+
+<script>
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const roll = document.getElementById('roll').value.trim();
+  if (!name || !roll) return;
+  
+  const res = await fetch('/api/students/{{ student.id }}', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name: name, roll_no: roll })
+  });
+  
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Failed to update student');
+    return;
+  }
+  
+  alert('Student updated successfully!');
+  window.location.href = '/students';
+});
+</script>
+{% endblock %}
+

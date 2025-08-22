@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Facial Attendance</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <style>
+      header { margin-bottom: 1rem; }
+      video, canvas { max-width: 100%; border-radius: 8px; }
+      .row { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+      .badge { background: #e9ecef; color: #333; border-radius: 1rem; padding: .25rem .6rem; font-size: .8rem; }
+    </style>
+  </head>
+  <body>
+    <header class="container">
+      <nav>
+        <ul>
+          <li><strong>Facial Attendance</strong></li>
+        </ul>
+        <ul>
+          <li><a href="/">Dashboard</a></li>
+          <li><a href="/students">Students</a></li>
+          <li><a href="/register">Register</a></li>
+          <li><a href="/sessions">Sessions</a></li>
+          <li><a href="/train">Train</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

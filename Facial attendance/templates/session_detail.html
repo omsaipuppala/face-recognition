@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Session: {{ session.name }}</h2>
+  <p>
+    <a role="button" class="secondary" href="/export/{{ session.id }}.csv">Download CSV</a>
+  </p>
+  <div class="row">
+    <div>
+      <video id="video" width="480" height="360" autoplay playsinline></video>
+      <div style="margin-top:.5rem;">
+        <button id="start">Start recognition</button>
+        <button id="stop" class="secondary">Stop</button>
+      </div>
+    </div>
+    <div>
+      <canvas id="canvas" width="480" height="360"></canvas>
+      <div id="status"></div>
+      <ul id="recognized"></ul>
+    </div>
+  </div>
+
+  <h3>Attendance</h3>
+  {% if attendance_rows %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Roll No</th><th>Present</th><th>Time</th></tr>
+    </thead>
+    <tbody>
+    {% for a in attendance_rows %}
+      <tr>
+        <td>{{ a.student.id }}</td>
+        <td>{{ a.student.name }}</td>
+        <td>{{ a.student.roll_no }}</td>
+        <td>{{ 'Yes' if a.present else 'No' }}</td>
+        <td>{{ a.recognized_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No attendance yet.</p>
+  {% endif %}
+</article>
+
+<script>
+function isSecureOk() {
+  return window.isSecureContext || ['localhost','127.0.0.1'].includes(location.hostname);
+}
+
+async function requestCameraStream() {
+  const constraints = { video: { facingMode: 'user' }, audio: false };
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+  if (legacy) {
+    return new Promise((resolve, reject) => legacy.call(navigator, constraints, resolve, reject));
+  }
+  throw new Error('Camera API not supported in this browser');
+}
+
+let stream, timer;
+
+async function initCamera() {
+  if (!isSecureOk()) {
+    alert('Use http://localhost or http://127.0.0.1 (or HTTPS) for camera access.');
+    return;
+  }
+  try {
+    stream = await requestCameraStream();
+    document.getElementById('video').srcObject = stream;
+  } catch (e) {
+    alert('Camera access failed: ' + (e && e.message ? e.message : e));
+  }
+}
+
+function draw() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+}
+
+function toDataUrl() {
+  return document.getElementById('canvas').toDataURL('image/jpeg', 0.9);
+}
+
+async function recognizeOnce() {
+  draw();
+  const res = await fetch('/api/recognize/{{ session.id }}', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ image: toDataUrl() })
+  });
+  const data = await res.json();
+  document.getElementById('status').innerText = `Faces recognized: ${data.recognized ? data.recognized.length : 0}`;
+  const list = document.getElementById('recognized');
+  list.innerHTML = '';
+  if (data.recognized) {
+    for (const r of data.recognized) {
+      const li = document.createElement('li');
+      const s = r.student ? `${r.student.name} (${r.student.roll_no})` : `ID ${r.student_id}`;
+      li.textContent = `${s} — conf ${Math.round((r.confidence + Number.EPSILON) * 100) / 100}`;
+      list.appendChild(li);
+    }
+  }
+}
+
+document.getElementById('start').addEventListener('click', async () => {
+  await initCamera();
+  if (stream) timer = setInterval(recognizeOnce, 1500);
+});
+
+document.getElementById('stop').addEventListener('click', () => {
+  if (timer) clearInterval(timer);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+});
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Students</h2>
+  {% if students %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Roll No</th><th>Created</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for s in students %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.roll_no }}</td>
+        <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <a href="/students/{{ s.id }}/edit" role="button" class="secondary">Edit</a>
+          <button data-id="{{ s.id }}" class="del">Delete</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No students yet. <a href="/register">Register one</a>.</p>
+  {% endif %}
+</article>
+<script>
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button.del');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  if (!confirm('Delete this student? This will remove captures and attendance records.')) return;
+  const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    location.reload();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'Delete failed');
+  }
+});
+</script>
+{% endblock %}

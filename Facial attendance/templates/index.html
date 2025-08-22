@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Dashboard</h2>
+  <p>
+    <span class="badge">Students: {{ total_students }}</span>
+    <span class="badge">Sessions: {{ total_sessions }}</span>
+  </p>
+  <p>
+    <a role="button" href="/register">Register a student</a>
+    <a role="button" href="/sessions">Start/Manage sessions</a>
+  </p>
+</article>
+{% endblock %}
+
+
+
